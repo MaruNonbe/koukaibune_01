@@ -1,0 +1,383 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>小鵜飼船 AR - River Edition</title>
+
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: none;
+    }
+    #top-ui-container,
+    #bottom-ui-container {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+    #top-ui-container { top: calc(12px + env(safe-area-inset-top)); gap: 8px; }
+    #bottom-ui-container { bottom: calc(18px + env(safe-area-inset-bottom)); gap: 10px; }
+    .ui-bar, .pad-grid {
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid rgba(255,255,255,0.22);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .ui-bar { display: flex; gap: 6px; padding: 6px 8px; border-radius: 16px; flex-wrap: wrap; justify-content: center; max-width: min(96vw, 720px); }
+    .pad-grid { display: grid; gap: 8px; padding: 14px; border-radius: 20px; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 58px); }
+    .btn {
+      width: 54px;
+      height: 54px;
+      background: #ffffff;
+      border: none;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      color: #263241;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+    }
+    .btn:active { transform: translateY(1px); background: #e0f2fe; }
+    .btn-icon { flex-direction: column; font-size: 10px; color: #1f2937; line-height: 1.1; }
+    .btn-icon span { font-size: 18px; margin-bottom: 2px; }
+    .mode-switch { background: #1f2937 !important; color: #fff !important; font-weight: 800; width: 84px !important; font-size: 12px; }
+    .mode-gps { background: #0ea5e9 !important; }
+    .btn-stop { background: #ef4444; color: #fff; font-weight: 800; font-size: 13px; }
+    #debug-info {
+      position: fixed;
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      left: 10px;
+      color: white;
+      background: rgba(0,0,0,0.52);
+      font-size: 11px;
+      z-index: 10000;
+      pointer-events: none;
+      padding: 7px 9px;
+      border-radius: 8px;
+      white-space: pre-line;
+      max-width: calc(100vw - 20px);
+    }
+    @media (max-width: 420px) {
+      .ui-bar { gap: 5px; padding: 5px; }
+      .btn { width: 48px; height: 48px; font-size: 20px; }
+      .mode-switch { width: 74px !important; }
+      .pad-grid { grid-template-columns: repeat(3, 54px); grid-template-rows: repeat(3, 54px); padding: 12px; }
+    }
+  </style>
+</head>
+
+<body>
+<div id="debug-info">モード: 自由配置（Manual）</div>
+
+<a-scene
+  vr-mode-ui="enabled: false"
+  embedded
+  arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; facingMode: environment;"
+  renderer="precision: mediump; antialias: true; alpha: true; colorManagement: true; exposure: 1.2;"
+>
+  <a-light type="ambient" color="#FFF" intensity="1.45"></a-light>
+  <a-light type="directional" position="-1 4 2" intensity="1.0"></a-light>
+  <a-light type="hemisphere" color="#FFF" groundColor="#445" intensity="1.1"></a-light>
+
+  <a-camera id="main-camera"></a-camera>
+
+  <a-entity id="ship"
+            gltf-model="models/koukaihune.glb"
+            position="0 -0.5 -15"
+            rotation="0 180 0"
+            scale="5.0 5.0 5.0">
+
+    <a-entity id="water-surface" position="-0.15 -0.025 0" rotation="-90 0 0" visible="true">
+      <a-circle radius="2.25" segments="64"
+                material="color: #38bdf8; transparent: true; opacity: 0.18; side: double; shader: flat"
+                animation="property: rotation; to: 0 0 360; dur: 18000; loop: true; easing: linear">
+      </a-circle>
+      <a-ring radius-inner="1.35" radius-outer="1.42" segments-theta="72"
+              material="color: #e0f2fe; transparent: true; opacity: 0.24; side: double; shader: flat"
+              animation="property: scale; from: 0.92 0.92 1; to: 1.16 1.16 1; dur: 2600; loop: true; dir: alternate; easing: easeInOutSine">
+      </a-ring>
+    </a-entity>
+
+    <a-entity id="bow-wave" visible="false">
+      <a-plane class="foam" position="-1.28 0 -0.32" rotation="-90 -62 0" width="0.72" height="1.35"
+               material="transparent: true; opacity: 0.55; shader: flat; color: #ffffff; side: double"
+               animation="property: scale; from: 0.2 0.18 1; to: 1.7 2.7 1; dur: 1050; loop: true; easing: easeOutQuad"
+               animation__fade="property: material.opacity; from: 0.58; to: 0; dur: 1050; loop: true; easing: easeOutQuad">
+      </a-plane>
+      <a-plane class="foam" position="-1.28 0 0.32" rotation="-90 -118 0" width="0.72" height="1.35"
+               material="transparent: true; opacity: 0.55; shader: flat; color: #ffffff; side: double"
+               animation="property: scale; from: 0.2 0.18 1; to: 1.7 2.7 1; dur: 1050; loop: true; delay: 160; easing: easeOutQuad"
+               animation__fade="property: material.opacity; from: 0.58; to: 0; dur: 1050; loop: true; delay: 160; easing: easeOutQuad">
+      </a-plane>
+      <a-ring position="-1.36 0 -0.04" rotation="-90 0 0" radius-inner="0.05" radius-outer="0.08" segments-theta="48"
+              material="color: #ffffff; transparent: true; opacity: 0.45; side: double; shader: flat"
+              animation="property: scale; from: 0.4 0.18 1; to: 2.2 0.75 1; dur: 1250; loop: true; easing: easeOutQuad"
+              animation__fade="property: material.opacity; from: 0.45; to: 0; dur: 1250; loop: true; easing: easeOutQuad">
+      </a-ring>
+      <a-ring position="-0.65 0 -0.55" rotation="-90 0 0" radius-inner="0.08" radius-outer="0.1" segments-theta="48"
+              material="color: #dff7ff; transparent: true; opacity: 0.3; side: double; shader: flat"
+              animation="property: scale; from: 0.5 0.2 1; to: 1.9 0.65 1; dur: 1600; loop: true; easing: easeOutQuad">
+      </a-ring>
+      <a-ring position="-0.65 0 0.55" rotation="-90 0 0" radius-inner="0.08" radius-outer="0.1" segments-theta="48"
+              material="color: #dff7ff; transparent: true; opacity: 0.3; side: double; shader: flat"
+              animation="property: scale; from: 0.5 0.2 1; to: 1.9 0.65 1; dur: 1600; loop: true; delay: 220; easing: easeOutQuad">
+      </a-ring>
+    </a-entity>
+  </a-entity>
+</a-scene>
+
+<div id="top-ui-container">
+  <div class="ui-bar">
+    <div class="btn mode-switch" id="btn-mode">GPS OFF</div>
+    <div class="btn btn-icon" id="btn-horn"><span>♪</span><div>音</div></div>
+    <div class="btn btn-icon" id="btn-height-up"><span>▲</span><div>高さ</div></div>
+    <div class="btn btn-icon" id="btn-height-down"><span>▼</span><div>高さ</div></div>
+    <div class="btn btn-icon" id="btn-zoom-in"><span>＋</span><div>拡大</div></div>
+    <div class="btn btn-icon" id="btn-zoom-out"><span>−</span><div>縮小</div></div>
+    <div class="btn btn-icon" id="btn-capture"><span>□</span><div>撮影</div></div>
+  </div>
+</div>
+
+<div id="bottom-ui-container">
+  <div class="pad-grid">
+    <div class="btn" id="btn-curve-left-fwd">↖</div>
+    <div class="btn" id="btn-fwd">↑</div>
+    <div class="btn" id="btn-curve-right-fwd">↗</div>
+    <div class="btn" id="btn-turn-left">←</div>
+    <div class="btn btn-stop" id="btn-stop">STOP</div>
+    <div class="btn" id="btn-turn-right">→</div>
+    <div class="btn" id="btn-curve-left-back">↙</div>
+    <div class="btn" id="btn-back">↓</div>
+    <div class="btn" id="btn-curve-right-back">↘</div>
+  </div>
+</div>
+
+<script>
+const ship = document.querySelector('#ship');
+const bowWave = document.querySelector('#bow-wave');
+const waterSurface = document.querySelector('#water-surface');
+const camera = document.querySelector('#main-camera');
+const btnMode = document.getElementById('btn-mode');
+const debug = document.getElementById('debug-info');
+const THREE = AFRAME.THREE;
+
+let isGpsMode = false;
+let curScale = 5.0;
+let state = { moving: 0, turning: 0 };
+let zoomState = 0;
+let heightState = 0;
+let bobOffset = 0;
+let lastMoving = 0;
+
+const targetLat = 38.114742;
+const targetLon = 140.033621;
+const MODEL_FORWARD_LOCAL = new THREE.Vector3(-1, 0, 0);
+
+function setStatus(text) {
+  debug.innerText = text;
+}
+
+async function requestMotionPermissionIfNeeded() {
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const res = await DeviceOrientationEvent.requestPermission();
+      if (res !== 'granted') throw new Error('DeviceOrientation permission denied');
+    }
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      const res2 = await DeviceMotionEvent.requestPermission();
+      if (res2 !== 'granted') throw new Error('DeviceMotion permission denied');
+    }
+    return true;
+  } catch (e) {
+    console.warn(e);
+    alert('モーションセンサーの許可が必要です。表示された場合は「許可」を選択してください。');
+    return false;
+  }
+}
+
+btnMode.onclick = async () => {
+  const ok = await requestMotionPermissionIfNeeded();
+  if (!ok) return;
+  isGpsMode = !isGpsMode;
+
+  if (isGpsMode) {
+    btnMode.innerText = 'GPS ON';
+    btnMode.classList.add('mode-gps');
+    setStatus('モード: GPS固定（位置情報を取得中…）');
+    camera.setAttribute('gps-camera', 'gpsMinDistance: 0; gpsTimeInterval: 1000;');
+    ship.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
+    ship.removeAttribute('position');
+
+    window.addEventListener('gps-camera-update-position', (e) => {
+      const { latitude, longitude, accuracy } = e.detail.position;
+      setStatus(`モード: GPS固定\n現在地: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n精度: ±${Math.round(accuracy)}m`);
+    });
+  } else {
+    location.reload();
+  }
+};
+
+let initialDist = 0;
+window.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+  }
+}, {passive: true});
+
+window.addEventListener('touchmove', e => {
+  if (e.touches.length === 2 && initialDist > 0) {
+    if (e.cancelable) e.preventDefault();
+    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    const diff = dist / initialDist;
+    curScale *= diff;
+    curScale = Math.max(0.1, Math.min(curScale, 50));
+    ship.object3D.scale.set(curScale, curScale, curScale);
+    initialDist = dist;
+  }
+}, {passive: false});
+
+function updateWaveMotion(mesh) {
+  const t = performance.now() * 0.001;
+  const speed = Math.abs(state.moving);
+  const turn = Math.abs(state.turning);
+  const waveStrength = 0.012 + speed * 0.02 + turn * 0.006;
+  const nextBob = Math.sin(t * 1.55) * (0.014 + speed * 0.018);
+
+  mesh.position.y += nextBob - bobOffset;
+  bobOffset = nextBob;
+  mesh.rotation.z = Math.sin(t * 1.7) * waveStrength;
+  mesh.rotation.x = Math.sin(t * 1.18 + 0.7) * waveStrength * 0.55;
+
+  if (waterSurface) {
+    const opacity = speed > 0 ? 0.24 : 0.14;
+    waterSurface.setAttribute('visible', true);
+    const circle = waterSurface.querySelector('a-circle');
+    if (circle) circle.setAttribute('material', `color: #38bdf8; transparent: true; opacity: ${opacity}; side: double; shader: flat`);
+  }
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  if (!ship.object3D) return;
+
+  const mesh = ship.object3D;
+  updateWaveMotion(mesh);
+
+  const showWake = state.moving > 0;
+  if (lastMoving !== state.moving) {
+    bowWave.setAttribute('visible', showWake ? 'true' : 'false');
+    lastMoving = state.moving;
+  }
+
+  if (state.turning !== 0) {
+    mesh.rotation.y += THREE.MathUtils.degToRad(1.0) * state.turning;
+  }
+
+  if (!isGpsMode && state.moving !== 0) {
+    const forward = MODEL_FORWARD_LOCAL.clone().applyQuaternion(mesh.quaternion).normalize();
+    mesh.position.addScaledVector(forward, state.moving * 0.04);
+  }
+
+  if (zoomState !== 0) {
+    curScale += zoomState * 0.05;
+    curScale = Math.max(0.1, Math.min(curScale, 50));
+    mesh.scale.set(curScale, curScale, curScale);
+  }
+
+  if (!isGpsMode && heightState !== 0) {
+    mesh.position.y += heightState * 0.02;
+  }
+
+  if (!isGpsMode) {
+    const mode = state.moving > 0 ? '前進中（船首波 ON）' : state.moving < 0 ? '後退中' : '待機中（波揺れ）';
+    setStatus(`モード: 自由配置（Manual）\n状態: ${mode}\n高さY: ${mesh.position.y.toFixed(2)}\nスケール: ${curScale.toFixed(1)}`);
+  }
+}
+loop();
+
+function setAction(id, moveVal, turnVal) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const start = (e) => {
+    if (e && e.cancelable) e.preventDefault();
+    state.moving = moveVal;
+    state.turning = turnVal;
+  };
+  const end = (e) => {
+    if (e && e.cancelable) e.preventDefault();
+    state.moving = 0;
+    state.turning = 0;
+  };
+  btn.addEventListener('touchstart', start, {passive:false});
+  btn.addEventListener('touchend', end, {passive:false});
+  btn.addEventListener('touchcancel', end, {passive:false});
+  btn.addEventListener('mousedown', start);
+  btn.addEventListener('mouseup', end);
+  btn.addEventListener('mouseleave', end);
+}
+
+setAction('btn-fwd', 1, 0);
+setAction('btn-back', -1, 0);
+setAction('btn-turn-left', 0, 1);
+setAction('btn-turn-right', 0, -1);
+setAction('btn-curve-left-fwd', 1, 1);
+setAction('btn-curve-right-fwd', 1, -1);
+setAction('btn-curve-left-back', -1, 1);
+setAction('btn-curve-right-back', -1, -1);
+
+document.getElementById('btn-stop').onclick = () => { state.moving = 0; state.turning = 0; };
+
+function bindHoldButton(id, onStart, onEnd) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); onStart(); }, {passive:false});
+  btn.addEventListener('touchend', onEnd, {passive:true});
+  btn.addEventListener('touchcancel', onEnd, {passive:true});
+  btn.addEventListener('mousedown', onStart);
+  btn.addEventListener('mouseup', onEnd);
+  btn.addEventListener('mouseleave', onEnd);
+}
+
+bindHoldButton('btn-zoom-in', () => { zoomState = 1; }, () => { zoomState = 0; });
+bindHoldButton('btn-zoom-out', () => { zoomState = -1; }, () => { zoomState = 0; });
+bindHoldButton('btn-height-up', () => { heightState = 1; }, () => { heightState = 0; });
+bindHoldButton('btn-height-down', () => { heightState = -1; }, () => { heightState = 0; });
+
+document.getElementById('btn-horn').onclick = () => {
+  setStatus('音声ファイル horn.mp3 が未配置のため、音は再生されません。');
+};
+
+document.getElementById('btn-capture').onclick = () => {
+  const cvs = document.querySelector('canvas');
+  if (!cvs) return;
+  cvs.toBlob(b => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'koukaibune_ar_snapshot.png';
+    a.click();
+  });
+};
+</script>
+</body>
+</html>
