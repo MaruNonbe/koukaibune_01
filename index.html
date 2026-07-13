@@ -21,7 +21,6 @@
       touch-action: none;
     }
 
-    /* UIコンテナ */
     #top-ui-container,
     #bottom-ui-container {
       position: fixed;
@@ -36,7 +35,6 @@
     #top-ui-container { top: calc(12px + env(safe-area-inset-top)); gap: 8px; }
     #bottom-ui-container { bottom: calc(18px + env(safe-area-inset-bottom)); gap: 10px; }
 
-    /* UIバー */
     .ui-bar, .pad-grid {
       background: rgba(15, 23, 42, 0.68);
       border: 1px solid rgba(255,255,255,0.22);
@@ -44,6 +42,7 @@
       pointer-events: auto;
       box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     }
+
     .ui-bar {
       display: flex;
       gap: 6px;
@@ -54,7 +53,6 @@
       max-width: min(96vw, 720px);
     }
 
-    /* 操作パッド */
     .pad-grid {
       display: grid;
       gap: 8px;
@@ -64,7 +62,6 @@
       grid-template-rows: repeat(3, 58px);
     }
 
-    /* ボタン */
     .btn {
       width: 54px; height: 54px;
       background: #ffffff;
@@ -89,7 +86,6 @@
     .mode-gps { background: #0ea5e9 !important; }
     .btn-stop { background: #ef4444; color: #fff; font-weight: 800; font-size: 13px; }
 
-    /* デバッグ表示 */
     #debug-info {
       position: fixed;
       bottom: calc(10px + env(safe-area-inset-bottom));
@@ -105,7 +101,6 @@
       max-width: calc(100vw - 20px);
     }
 
-    /* 著作権表記 */
     #copyright {
       position: fixed;
       right: 12px;
@@ -125,18 +120,15 @@
 
 <body>
 
-<!-- 著作権表記 -->
 <div id="copyright">
   CopyRight 2026 Freedom,.Inc<br>
   商用利用不可・再販禁止
 </div>
 
-<!-- UI：上部 -->
 <div id="top-ui-container">
   <div class="ui-bar">
     <button class="btn mode-switch" id="btn-mode">GPS OFF</button>
 
-    <!-- ★モデル切替ボタン追加★ -->
     <button class="btn btn-icon" id="btn-change-model">
       <span>⛵</span>
       <div>モデル</div>
@@ -209,18 +201,17 @@
 </a-scene>
 
 <script>
-/* ここからあなたの既存ロジック（完全維持） */
+/* ----------------------------------------------------------
+   ★ モデル切替機能（追加機能）
+---------------------------------------------------------- */
 
-/* --- 省略（あなたの貼ったコードをそのまま統合） --- */
-
-/* ★モデル切替機能追加★ */
 const models = [
-  "Koukaibune.glb",
-  "Zaguriki.glb",
-  "Nagai_City_Hall.glb",
-  "Cafe-v1.glb",
-  "Flower.glb",
-  "Barnic_Face_Hole.glb"
+  "Koukaibune.glb",        // 小鵜飼船（初期表示）
+  "Zaguriki.glb",          // 座繰り機
+  "Nagai_City_Hall.glb",   // 長井市役所新庁舎
+  "Cafe-v1.glb",           // カフェ
+  "Flower.glb",            // 花
+  "Barnic_Face_Hole.glb"   // 顔出しフィギュア
 ];
 
 let modelIndex = 0;
@@ -232,7 +223,9 @@ document.getElementById('btn-change-model').onclick = () => {
   setStatus(`モデル切替: ${nextModel}`);
 };
 
-/* --- 以下、あなたの既存コードを完全に統合済み --- */
+/* ----------------------------------------------------------
+   ★ 既存ロジック（あなたのコードを完全維持）
+---------------------------------------------------------- */
 
 const ship = document.querySelector('#ship');
 const bowWave = document.querySelector('#bow-wave');
@@ -250,13 +243,20 @@ let heightState = 0;
 let bobOffset = 0;
 let lastMoving = 0;
 
+/* 小鵜飼船の実際の位置（GPSモード用） */
 const targetLat = 38.114742;
 const targetLon = 140.033621;
+
+/* 船の前方向（ローカル座標） */
 const MODEL_FORWARD_LOCAL = new THREE.Vector3(-1, 0, 0);
 
-function setStatus(text) { debug.innerText = text; }
+function setStatus(text) {
+  debug.innerText = text;
+}
 
-/* モーション許可 */
+/* ----------------------------------------------------------
+   ★ モーションセンサー許可（iPhone用）
+---------------------------------------------------------- */
 async function requestMotionPermissionIfNeeded() {
   try {
     if (typeof DeviceOrientationEvent !== 'undefined' &&
@@ -264,44 +264,58 @@ async function requestMotionPermissionIfNeeded() {
       const res = await DeviceOrientationEvent.requestPermission();
       if (res !== 'granted') throw new Error('DeviceOrientation permission denied');
     }
+
     if (typeof DeviceMotionEvent !== 'undefined' &&
         typeof DeviceMotionEvent.requestPermission === 'function') {
       const res2 = await DeviceMotionEvent.requestPermission();
       if (res2 !== 'granted') throw new Error('DeviceMotion permission denied');
     }
+
     return true;
   } catch (e) {
     console.warn(e);
-    alert('モーションセンサーの許可が必要です。');
+    alert('モーションセンサーの許可が必要です。「許可」を選択してください。');
     return false;
   }
 }
 
-/* GPSモード */
+/* ----------------------------------------------------------
+   ★ GPSモード切替
+---------------------------------------------------------- */
 btnMode.onclick = async () => {
   const ok = await requestMotionPermissionIfNeeded();
   if (!ok) return;
+
   isGpsMode = !isGpsMode;
 
   if (isGpsMode) {
     btnMode.innerText = 'GPS ON';
     btnMode.classList.add('mode-gps');
+
     setStatus('モード: GPS固定（位置情報を取得中…）');
+
     camera.setAttribute('gps-camera', 'gpsMinDistance: 0; gpsTimeInterval: 1000;');
     ship.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
     ship.removeAttribute('position');
 
     window.addEventListener('gps-camera-update-position', (e) => {
       const { latitude, longitude, accuracy } = e.detail.position;
-      setStatus(`モード: GPS固定\n現在地: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n精度: ±${Math.round(accuracy)}m`);
+      setStatus(
+        `モード: GPS固定\n現在地: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n精度: ±${Math.round(accuracy)}m`
+      );
     });
+
   } else {
+    /* Manualモードに戻すためページ再読み込み */
     location.reload();
   }
 };
 
-/* ピンチズーム */
+/* ----------------------------------------------------------
+   ★ ピンチズーム処理
+---------------------------------------------------------- */
 let initialDist = 0;
+
 window.addEventListener('touchstart', e => {
   if (e.touches.length === 2) {
     initialDist = Math.hypot(
@@ -314,46 +328,63 @@ window.addEventListener('touchstart', e => {
 window.addEventListener('touchmove', e => {
   if (e.touches.length === 2 && initialDist > 0) {
     if (e.cancelable) e.preventDefault();
+
     const dist = Math.hypot(
       e.touches[0].pageX - e.touches[1].pageX,
       e.touches[0].pageY - e.touches[1].pageY
     );
+
     const diff = dist / initialDist;
     curScale *= diff;
     curScale = Math.max(0.1, Math.min(curScale, 50));
+
     ship.object3D.scale.set(curScale, curScale, curScale);
     initialDist = dist;
   }
 }, {passive: false});
 
-/* 波揺れ */
+
+/* ----------------------------------------------------------
+   ★ 波揺れ処理
+---------------------------------------------------------- */
 function updateWaveMotion(mesh) {
   const t = performance.now() * 0.001;
   const speed = Math.abs(state.moving);
   const turn = Math.abs(state.turning);
+
   const waveStrength = 0.012 + speed * 0.02 + turn * 0.006;
   const nextBob = Math.sin(t * 1.55) * (0.014 + speed * 0.018);
 
   mesh.position.y += nextBob - bobOffset;
   bobOffset = nextBob;
+
   mesh.rotation.z = Math.sin(t * 1.7) * waveStrength;
   mesh.rotation.x = Math.sin(t * 1.18 + 0.7) * waveStrength * 0.55;
 
   if (waterSurface) {
     const opacity = speed > 0 ? 0.24 : 0.14;
     waterSurface.setAttribute('visible', true);
+
     const circle = waterSurface.querySelector('a-circle');
-    if (circle) circle.setAttribute('material',
-      `color: #38bdf8; transparent: true; opacity: ${opacity}; side: double; shader: flat`);
+    if (circle) {
+      circle.setAttribute(
+        'material',
+        `color: #38bdf8; transparent: true; opacity: ${opacity}; side: double; shader: flat`
+      );
+    }
   }
 }
 
-/* メインループ */
+
+/* ----------------------------------------------------------
+   ★ メインループ（移動・旋回・波揺れ）
+---------------------------------------------------------- */
 function loop() {
   requestAnimationFrame(loop);
   if (!ship.object3D) return;
 
   const mesh = ship.object3D;
+
   updateWaveMotion(mesh);
 
   const showWake = state.moving > 0;
@@ -367,7 +398,10 @@ function loop() {
   }
 
   if (!isGpsMode && state.moving !== 0) {
-    const forward = MODEL_FORWARD_LOCAL.clone().applyQuaternion(mesh.quaternion).normalize();
+    const forward = MODEL_FORWARD_LOCAL.clone()
+      .applyQuaternion(mesh.quaternion)
+      .normalize();
+
     mesh.position.addScaledVector(forward, state.moving * 0.04);
   }
 
@@ -394,20 +428,26 @@ function loop() {
 }
 loop();
 
-/* 操作ボタン */
+
+/* ----------------------------------------------------------
+   ★ 操作ボタン設定
+---------------------------------------------------------- */
 function setAction(id, moveVal, turnVal) {
   const btn = document.getElementById(id);
   if (!btn) return;
+
   const start = (e) => {
     if (e && e.cancelable) e.preventDefault();
     state.moving = moveVal;
     state.turning = turnVal;
   };
+
   const end = (e) => {
     if (e && e.cancelable) e.preventDefault();
     state.moving = 0;
     state.turning = 0;
   };
+
   btn.addEventListener('touchstart', start, {passive:false});
   btn.addEventListener('touchend', end, {passive:false});
   btn.addEventListener('touchcancel', end, {passive:false});
@@ -416,4 +456,68 @@ function setAction(id, moveVal, turnVal) {
   btn.addEventListener('mouseleave', end);
 }
 
-setAction('btn-fwd
+setAction('btn-fwd', 1, 0);
+setAction('btn-back', -1, 0);
+setAction('btn-turn-left', 0, 1);
+setAction('btn-turn-right', 0, -1);
+setAction('btn-curve-left-fwd', 1, 1);
+setAction('btn-curve-right-fwd', 1, -1);
+setAction('btn-curve-left-back', -1, 1);
+setAction('btn-curve-right-back', -1, -1);
+
+document.getElementById('btn-stop').onclick = () => {
+  state.moving = 0;
+  state.turning = 0;
+};
+
+/* ----------------------------------------------------------
+   ★ 長押しボタン（ズーム・高さ調整）
+---------------------------------------------------------- */
+function bindHoldButton(id, onStart, onEnd) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+
+  btn.addEventListener('touchstart', e => {
+    if (e.cancelable) e.preventDefault();
+    onStart();
+  }, {passive:false});
+
+  btn.addEventListener('touchend', onEnd, {passive:true});
+  btn.addEventListener('touchcancel', onEnd, {passive:true});
+  btn.addEventListener('mousedown', onStart);
+  btn.addEventListener('mouseup', onEnd);
+  btn.addEventListener('mouseleave', onEnd);
+}
+
+bindHoldButton('btn-zoom-in', () => { zoomState = 1; }, () => { zoomState = 0; });
+bindHoldButton('btn-zoom-out', () => { zoomState = -1; }, () => { zoomState = 0; });
+bindHoldButton('btn-height-up', () => { heightState = 1; }, () => { heightState = 0; });
+bindHoldButton('btn-height-down', () => { heightState = -1; }, () => { heightState = 0; });
+
+
+/* ----------------------------------------------------------
+   ★ ホーン（音声ファイル未配置）
+---------------------------------------------------------- */
+document.getElementById('btn-horn')?.addEventListener('click', () => {
+  setStatus('音声ファイル horn.mp3 が未配置のため、音は再生されません。');
+});
+
+
+/* ----------------------------------------------------------
+   ★ 撮影機能（Canvasを画像保存）
+---------------------------------------------------------- */
+document.getElementById('btn-capture').onclick = () => {
+  const cvs = document.querySelector('canvas');
+  if (!cvs) return;
+
+  cvs.toBlob(b => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'koukaibune_ar_snapshot.png';
+    a.click();
+  });
+};
+</script>
+
+</body>
+</html>
