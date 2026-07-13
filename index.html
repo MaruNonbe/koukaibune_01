@@ -1,32 +1,16 @@
-<<<<<<< HEAD
 ﻿<!DOCTYPE html>
-=======
-<!DOCTYPE html>
->>>>>>> e42b03ae901dda9def2ed227b7f16a13e4c4e929
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
                  user-scalable=no, viewport-fit=cover" />
-  <title>WebAR Unified — Ship & Crane</title>
+  <title>小鵜飼船 AR - River Edition</title>
 
-  <!-- A-Frame & AR.js（船AR用） -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
 
-  <!-- Three.js（CraneAR用） -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
-      }
-    }
-  </script>
-
   <style>
-    /* ここに A-Frame（船AR）と CraneAR の共通CSSを統合 */
     html, body {
       margin: 0; padding: 0;
       width: 100%; height: 100%;
@@ -36,851 +20,184 @@
       touch-action: none;
     }
 
-    /* ▼ モード切替ボタン（新規追加） */
-    #mode-switcher {
+    #top-ui-container, #bottom-ui-container {
       position: fixed;
-      top: calc(12px + env(safe-area-inset-top));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 99999;
+      left: 0;
+      width: 100%;
+      z-index: 9999;
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    #top-ui-container {
+      top: calc(12px + env(safe-area-inset-top));
+      gap: 8px;
+    }
+
+    #bottom-ui-container {
+      bottom: calc(18px + env(safe-area-inset-bottom));
       gap: 10px;
-      pointer-events: auto;
     }
-    #mode-switcher button {
-      background: rgba(15,23,42,0.78);
-      color: #fff;
+
+    .ui-bar, .pad-grid {
+      background: rgba(15, 23, 42, 0.68);
       border: 1px solid rgba(255,255,255,0.22);
-      padding: 10px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
       backdrop-filter: blur(10px);
+      pointer-events: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     }
-    #mode-switcher button.active {
-      background: #0ea5e9;
+
+    .ui-bar {
+      display: flex;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: min(96vw, 720px);
+    }
+
+    .pad-grid {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 20px;
+      grid-template-columns: repeat(3, 58px);
+      grid-template-rows: repeat(3, 58px);
+    }
+
+    .btn {
+      width: 54px;
+      height: 54px;
+      background: #ffffff;
+      border: none;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      color: #263241;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      background: #e0f2fe;
+    }
+
+    .btn-icon {
+      flex-direction: column;
+      font-size: 10px;
+      color: #1f2937;
+      line-height: 1.1;
+    }
+
+    .btn-icon span {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .mode-switch {
+      background: #1f2937 !important;
+      color: #fff !important;
+      font-weight: 800;
+      width: 84px !important;
+      font-size: 12px;
+    }
+
+    .mode-gps {
+      background: #0ea5e9 !important;
+    }
+
+    .btn-stop {
+      background: #ef4444;
       color: #fff;
+      font-weight: 800;
+      font-size: 13px;
     }
 
-    /* ▼ 船AR（A‑Frame）UIのCSS（あなたの既存コードを統合） */
-    /* …この後 Part 2 で続きます… */
-
-    /* ▼ CraneAR（Three.js）UIのCSS（あなたの既存コードを統合） */
-    /* …この後 Part 3 で続きます… */
+    #debug-info {
+      position: fixed;
+      bottom: calc(10px + env(safe-area-inset-bottom));
+      left: 10px;
+      color: white;
+      background: rgba(0,0,0,0.52);
+      font-size: 11px;
+      z-index: 10000;
+      pointer-events: none;
+      padding: 7px 9px;
+      border-radius: 8px;
+      white-space: pre-line;
+      max-width: calc(100vw - 20px);
+    }
   </style>
 </head>
 
 <body>
 
-<!-- ▼ モード切替ボタン（A‑Frame ↔ Three.js） -->
-<div id="mode-switcher">
-  <button id="btn-ship-mode" class="active">船 AR</button>
-  <button id="btn-crane-mode">Crane AR</button>
-</div>
-<!-- ▼ 船AR（A‑Frame）ブロック -->
-<div id="ship-ar-container" style="display:block; width:100%; height:100%;">
+<div id="debug-info">モード: 自由配置（Manual）</div>
 
-  <!-- 上部UI（船AR） -->
-  <div id="top-ui-container">
-    <div class="ui-bar">
-      <button class="btn mode-switch" id="btn-mode">GPS OFF</button>
+<a-scene
+  vr-mode-ui="enabled: false"
+  embedded
+  arjs="sourceType: webcam; debugUIEnabled: false; videoTexture: true; facingMode: environment;"
+  renderer="precision: mediump; antialias: true; alpha: true; colorManagement: true; exposure: 1.2;"
+>
+  <a-light type="ambient" color="#FFF" intensity="1.45"></a-light>
+  <a-light type="directional" position="-1 4 2" intensity="1.0"></a-light>
+  <a-light type="hemisphere" color="#FFF" groundColor="#445" intensity="1.1"></a-light>
 
-      <!-- モデル切替（共通） -->
-      <button class="btn btn-icon" id="btn-change-model">
-        <span>⛵</span>
-        <div>モデル</div>
-      </button>
+  <a-camera id="main-camera"></a-camera>
 
-      <button class="btn btn-icon" id="btn-capture">
-        <span>📸</span>
-        <div>撮影</div>
-      </button>
-    </div>
-  </div>
+  <a-entity id="ship"
+            gltf-model="models/koukaihune.glb"
+            position="0 -0.5 -15"
+            rotation="0 180 0"
+            scale="5.0 5.0 5.0">
 
-  <!-- 下部UI（船AR） -->
-  <div id="bottom-ui-container">
-    <div class="pad-grid">
-      <button class="btn" id="btn-curve-left-fwd">↖</button>
-      <button class="btn" id="btn-fwd">▲</button>
-      <button class="btn" id="btn-curve-right-fwd">↗</button>
+    <!-- 水面 -->
+    <a-entity id="water-surface" position="-0.15 -0.025 0" rotation="-90 0 0" visible="true">
+      <a-circle radius="2.25" segments="64"
+                material="color: #38bdf8; transparent: true; opacity: 0.18; side: double; shader: flat"
+                animation="property: rotation; to: 0 0 360; dur: 18000; loop: true; easing: linear">
+      </a-circle>
 
-      <button class="btn" id="btn-turn-left">◀</button>
-      <button class="btn btn-stop" id="btn-stop">止</button>
-      <button class="btn" id="btn-turn-right">▶</button>
-
-      <button class="btn" id="btn-curve-left-back">↙</button>
-      <button class="btn" id="btn-back">▼</button>
-      <button class="btn" id="btn-curve-right-back">↘</button>
-    </div>
-
-    <div class="ui-bar">
-      <button class="btn btn-icon" id="btn-zoom-in"><span>＋</span><div>拡大</div></button>
-      <button class="btn btn-icon" id="btn-zoom-out"><span>－</span><div>縮小</div></button>
-      <button class="btn btn-icon" id="btn-height-up"><span>⬆</span><div>上昇</div></button>
-      <button class="btn btn-icon" id="btn-height-down"><span>⬇</span><div>下降</div></button>
-    </div>
-  </div>
-
-  <!-- デバッグ表示 -->
-  <div id="debug-info">起動中…</div>
-
-  <!-- 著作権表記 -->
-  <div id="copyright">
-    CopyRight 2026 Freedom,.Inc<br>
-    商用利用不可・再販禁止
-  </div>
-
-  <!-- ▼ A‑Frame Scene（船AR本体） -->
-  <a-scene
-    id="ship-scene"
-    renderer="colorManagement: true"
-    embedded
-    vr-mode-ui="enabled: false"
-    arjs="sourceType: webcam; debugUIEnabled: false;"
-  >
-    <a-entity id="main-camera" camera look-controls></a-entity>
-
-    <!-- 初期モデル：小鵜飼船 -->
-    <a-entity id="ship"
-              gltf-model="models/Koukaibune.glb"
-              position="0 -0.5 -15"
-              rotation="0 180 0"
-              scale="5 5 5">
+      <a-ring radius-inner="1.35" radius-outer="1.42" segments-theta="72"
+              material="color: #e0f2fe; transparent: true; opacity: 0.24; side: double; shader: flat"
+              animation="property: scale; from: 0.92 0.92 1; to: 1.16 1.16 1; dur: 2600; loop: true; dir: alternate; easing: easeInOutSine">
+      </a-ring>
     </a-entity>
 
     <!-- 船首波 -->
     <a-entity id="bow-wave" visible="false">
-      <a-circle radius="1.2" position="0 0 -1.8"
-                material="color: #38bdf8; opacity: 0.22; shader: flat">
-      </a-circle>
+      <a-plane class="foam" position="-1.28 0 -0.32" rotation="-90 -62 0"
+               width="0.72" height="1.35"
+               material="transparent: true; opacity: 0.55; shader: flat; color: #ffffff; side: double"
+               animation="property: scale; from: 0.2 0.18 1; to: 1.7 2.7 1; dur: 1050; loop: true; easing: easeOutQuad"
+               animation__fade="property: material.opacity; from: 0.58; to: 0; dur: 1050; loop: true; easing: easeOutQuad">
+      </a-plane>
+
+      <a-plane class="foam" position="-1.28 0 0.32" rotation="-90 -118 0"
+               width="0.72" height="1.35"
+               material="transparent: true; opacity: 0.55; shader: flat; color: #ffffff; side: double"
+               animation="property: scale; from: 0.2 0.18 1; to: 1.7 2.7 1; dur: 1050; loop: true; delay: 160; easing: easeOutQuad"
+               animation__fade="property: material.opacity; from: 0.58; to: 0; dur: 1050; loop: true; delay: 160; easing: easeOutQuad">
+      </a-plane>
     </a-entity>
 
-    <!-- 水面 -->
-    <a-entity id="water-surface" visible="false">
-      <a-circle radius="2.8" position="0 -0.01 0"
-                material="color: #38bdf8; opacity: 0.14; shader: flat">
-      </a-circle>
-    </a-entity>
+  </a-entity>
+</a-scene>
 
-  </a-scene>
-</div>
-<!-- ▼ CraneAR（Three.js）ブロック -->
-<div id="crane-ar-container" style="display:none; width:100%; height:100%;">
-
-  <!-- Three.js Canvas -->
-  <div id="app"></div>
-
-  <!-- iOS QuickLook（USDZ） -->
-  <a id="quickLookLink" rel="ar" href="models/webar_crane_generated.usdz" style="display:none">
-    <img alt="Generated crane AR model" src="./preview_0001.png">
-  </a>
-
-  <!-- CraneAR 上部UI -->
-  <header class="topbar">
-    <div class="brand">
-      <strong>Crane KY 3D Demo</strong>
-      <span id="loadState">モデル読込中</span>
-    </div>
-
-    <div class="views" aria-label="視点切替">
-      <button data-view="outside" class="active" title="車外視点">外</button>
-      <button data-view="cockpit" title="運転席視点">席</button>
-      <button data-view="top" title="俯瞰視点">俯</button>
-    </div>
-
-    <div class="actions">
-      <button id="arButton" title="WebXR AR">AR</button>
-    </div>
-  </header>
-
-  <!-- CraneAR 走行操作パッド -->
-  <nav class="drive-pad" aria-label="走行操作">
-    <span></span>
-    <button data-hold="forward" title="前進">▲</button>
-    <span></span>
-
-    <button data-hold="left" title="左折">◀</button>
-    <button class="brake" data-hold="brake" title="ブレーキ">止</button>
-    <button data-hold="right" title="右折">▶</button>
-
-    <span></span>
-    <button data-hold="backward" title="後進">▼</button>
-    <span></span>
-
-    <button class="wide" id="resetPose">原点復帰</button>
-  </nav>
-
-  <!-- CraneAR 作業装置パネル -->
-  <aside class="panel" aria-label="作業装置操作">
-    <div class="panel-header">
-      <h2>作業装置</h2>
-      <button id="panelToggle" class="panel-toggle" title="作業装置パネルを開閉">−</button>
-    </div>
-
-    <div class="panel-body">
-
-      <label class="control">大きさ
-        <input id="scale" type="range" min="0.1" max="3" value="1" step="0.01">
-        <output id="scaleOut">1.00</output>
-      </label>
-
-      <label class="control">旋回台
-        <input id="slew" type="range" min="-180" max="180" value="0" step="1">
-        <output id="slewOut">0°</output>
-      </label>
-
-      <label class="control">ブーム仰角
-        <input id="boomPitch" type="range" min="-20" max="72" value="12" step="1">
-        <output id="boomPitchOut">12°</output>
-      </label>
-
-      <label class="control">ブーム伸縮
-        <input id="boomExtend" type="range" min="0" max="1" value="0" step="0.01">
-        <output id="boomExtendOut">0%</output>
-      </label>
-
-      <label class="control">フック上下
-        <input id="hook" type="range" min="-1" max="1" value="0" step="0.01">
-        <output id="hookOut">0%</output>
-      </label>
-
-      <label class="control">アウトリガー
-        <input id="outrigger" type="range" min="0" max="1" value="0" step="0.01">
-        <output id="outriggerOut">0%</output>
-      </label>
-
-      <div class="control-actions">
-        <button id="outriggerRetract" type="button">格納</button>
-        <button id="outriggerDeploy" type="button">展開</button>
-      </div>
-
-      <!-- KYシナリオ -->
-      <div class="ky-box">
-        <h3>KY再生</h3>
-
-        <div class="ky-buttons">
-          <button type="button" data-ky="outrigger">KY1 アウトリガー未展開</button>
-          <button type="button" data-ky="underload">KY2 吊り荷下への立入</button>
-          <button type="button" data-ky="slew">KY3 旋回範囲内への接近</button>
-        </div>
-
-        <div class="control-actions">
-          <button id="kyPlay" type="button">再生</button>
-          <button id="kyClear" type="button">解除</button>
-        </div>
-
-        <p id="kySummary" class="ky-summary">
-          KYを選択すると、危険範囲・人物・注意点を3Dで表示します。
-        </p>
-      </div>
-
-      <details>
-        <summary>ノード確認</summary>
-        <div id="nodeList" class="node-list">読込中...</div>
-        <p class="hint">
-          このデモはBlender生成モデルの可動ノード名へ接続済みです。
-        </p>
-      </details>
-
-    </div>
-  </aside>
-
-  <div class="status" id="status">KYを選択して3Dで危険予知を再生</div>
-
-</div>
-<!-- ▼ CraneAR：Three.js ロジック -->
-<script type="module">
-  import * as THREE from "three";
-  import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-  import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-  import { ARButton } from "three/addons/webxr/ARButton.js";
-
-  /* ------------------------------
-     CraneAR 初期設定
-  ------------------------------ */
-  const PART_MAP = {
-    frontWheels: ["FrontWheel_FL", "FrontWheel_FR"],
-    turntable: "Turntable_Yaw",
-    boomPitch: "BoomPitch_X",
-    boomExtend: "BoomExtend_Z",
-    boomSecondExtend: "BoomSecondExtend_Z",
-    hook: "HookHoist_Y",
-    hookSwing: "HookBlock_Swing",
-    cockpitAnchor: "Camera_Cockpit_View",
-    outriggers: [
-      { side: -1, root: "Outrigger_Front_L", beam: "Outrigger_Front_L_Beam", collar: "Outrigger_Front_L_Collar", jack: "Outrigger_Front_L_Jack", foot: "Outrigger_Front_L_Foot" },
-      { side: 1, root: "Outrigger_Front_R", beam: "Outrigger_Front_R_Beam", collar: "Outrigger_Front_R_Collar", jack: "Outrigger_Front_R_Jack", foot: "Outrigger_Front_R_Foot" },
-      { side: -1, root: "Outrigger_Rear_L", beam: "Outrigger_Rear_L_Beam", collar: "Outrigger_Rear_L_Collar", jack: "Outrigger_Rear_L_Jack", foot: "Outrigger_Rear_L_Foot" },
-      { side: 1, root: "Outrigger_Rear_R", beam: "Outrigger_Rear_R_Beam", collar: "Outrigger_Rear_R_Collar", jack: "Outrigger_Rear_R_Jack", foot: "Outrigger_Rear_R_Foot" }
-    ]
-  };
-
-  const app = document.querySelector("#app");
-  const loadState = document.querySelector("#loadState");
-  const status = document.querySelector("#status");
-  const nodeList = document.querySelector("#nodeList");
-  const quickLookLink = document.querySelector("#quickLookLink");
-  const panel = document.querySelector(".panel");
-  const panelToggle = document.querySelector("#panelToggle");
-  const kySummary = document.querySelector("#kySummary");
-
-  const ASSET_VERSION = "20260628-outrigger-foot-stowed-up";
-  const BOOM_STAGE_TRAVEL = 1.15;
-  const OUTRIGGER_SIDE_TRAVEL = 0;
-  const OUTRIGGER_BEAM_SHIFT = 0.38;
-  const OUTRIGGER_BEAM_SCALE = 2.3;
-  const OUTRIGGER_TIP_TRAVEL = 1.15;
-  const OUTRIGGER_DOWN_TRAVEL = 0.48;
-  const OUTRIGGER_JACK_BASE_LENGTH = 0.64;
-  const OUTRIGGER_LIFT = 0.28;
-
-  const KY_SCENARIOS = {
-    outrigger: {
-      title: "KY1 アウトリガー未展開",
-      summary: "アウトリガー未展開のままブームを伸ばすと、車体が不安定になります。作業前に張出し・接地・水平を確認します。"
-    },
-    underload: {
-      title: "KY2 吊り荷下への立入",
-      summary: "吊り荷の下やワイヤー直下へ人が入ると、落下・振れによる接触災害につながります。吊り荷下は立入禁止にします。"
-    },
-    slew: {
-      title: "KY3 旋回範囲内への接近",
-      summary: "旋回台とブームの作業半径内に人や障害物が入ると、挟まれ・接触の危険があります。旋回範囲を明示します。"
-    }
-  };
-
-  const isIOS =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-  /* ------------------------------
-     Three.js Renderer
-  ------------------------------ */
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.xr.enabled = true;
-  app.appendChild(renderer.domElement);
-
-  /* ------------------------------
-     Scene / Camera / Controls
-  ------------------------------ */
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111820);
-
-  const camera = new THREE.PerspectiveCamera(54, innerWidth / innerHeight, 0.01, 500);
-  camera.position.set(5.8, 3.4, 7.2);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.target.set(0, 1.2, 0);
-
-  const vehicle = new THREE.Group();
-  scene.add(vehicle);
-
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x55606a, 2.4);
-  scene.add(hemi);
-
-  const sun = new THREE.DirectionalLight(0xffffff, 2.4);
-  sun.position.set(4, 8, 5);
-  scene.add(sun);
-
-  const grid = new THREE.GridHelper(18, 18, 0x7d8790, 0x29313a);
-  grid.position.y = -0.02;
-  scene.add(grid);
-
-  const kyGroup = new THREE.Group();
-  kyGroup.name = "KY_Hazard_Examples";
-  scene.add(kyGroup);
-
-  /* ------------------------------
-     CraneAR モデル読み込み
-  ------------------------------ */
-  const parts = {};
-  const input = { forward: false, backward: false, left: false, right: false, brake: false };
-
-  const state = {
-    speed: 0,
-    steer: 0,
-    scale: 1,
-    basePositions: new Map(),
-    baseVehicleY: 0,
-    view: "outside",
-    lastSlew: 0,
-    lastBoomPitch: 12,
-    lastBoomExtend: 0,
-    lastVehicleSpeed: 0,
-    hookSwingSide: 0,
-    hookSwingForward: 0,
-    hookSwingSideVelocity: 0,
-    hookSwingForwardVelocity: 0,
-    kyScenario: null,
-    kyPlaying: false,
-    kyTime: 0,
-    modelReady: false
-  };
-
-  /* ------------------------------
-     GLTFLoader（Craneモデル）
-  ------------------------------ */
-  new GLTFLoader().load(
-    "models/webar_crane_generated.glb",
-    gltf => {
-      const model = gltf.scene;
-      vehicle.add(model);
-
-      centerModel(model);
-      cacheParts(model);
-      syncControlsToModel();
-
-      state.modelReady = true;
-      loadState.textContent = "モデル読込完了";
-      status.textContent = "走行・作業装置・視点切替を試せます";
-
-      applyView(true);
-    },
-    progress => {
-      if (progress.total) {
-        const pct = Math.round((progress.loaded / progress.total) * 100);
-        loadState.textContent = `モデル読込中 ${pct}%`;
-      }
-    },
-    error => {
-      console.error(error);
-      loadState.textContent = "読込エラー";
-      status.textContent = "ローカルサーバー経由で開いてください";
-    }
-  );
-
-  /* ------------------------------
-     レンダリングループ
-  ------------------------------ */
-  const clock = new THREE.Clock();
-  renderer.setAnimationLoop(() => {
-    const dt = Math.min(clock.getDelta(), 0.05);
-
-    updateDrive(dt);
-    updateHookSwing(dt);
-    updateKyScenario(dt);
-
-    controls.update();
-    renderer.render(scene, camera);
-  });
-
-  addEventListener("resize", () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-  });
-</script>
-<!-- ▼ 船AR：A‑Frame ロジック -->
+<!-- 船ARロジック（既存コード） -->
 <script>
-/* ----------------------------------------------------------
-   ★ モデル切替（船AR・CraneAR 共通モデル）
----------------------------------------------------------- */
-const models = [
-  "Koukaibune.glb",
-  "Zaguriki.glb",
-  "Nagai_City_Hall.glb",
-  "Cafe-v1.glb",
-  "Flower.glb",
-  "Barnic_Face_Hole.glb"
-];
-
-let modelIndex = 0;
-
-document.getElementById('btn-change-model').onclick = () => {
-  modelIndex = (modelIndex + 1) % models.length;
-  const nextModel = models[modelIndex];
-  ship.setAttribute("gltf-model", `models/${nextModel}`);
-  setStatus(`モデル切替: ${nextModel}`);
-};
-
-/* ----------------------------------------------------------
-   ★ 船AR：既存ロジック（あなたのコードを完全統合）
----------------------------------------------------------- */
-const ship = document.querySelector('#ship');
-const bowWave = document.querySelector('#bow-wave');
-const waterSurface = document.querySelector('#water-surface');
-const camera = document.querySelector('#main-camera');
-const btnMode = document.getElementById('btn-mode');
-const debug = document.getElementById('debug-info');
-const THREE_A = AFRAME.THREE;
-
-let isGpsMode = false;
-let curScale = 5.0;
-let stateShip = { moving: 0, turning: 0 };
-let zoomState = 0;
-let heightState = 0;
-let bobOffset = 0;
-let lastMoving = 0;
-
-/* 小鵜飼船の実際の位置（GPSモード用） */
-const targetLat = 38.114742;
-const targetLon = 140.033621;
-
-/* 船の前方向（ローカル座標） */
-const MODEL_FORWARD_LOCAL = new THREE_A.Vector3(-1, 0, 0);
-
-function setStatus(text) {
-  debug.innerText = text;
-}
-
-/* ----------------------------------------------------------
-   ★ モーションセンサー許可（iPhone用）
----------------------------------------------------------- */
-async function requestMotionPermissionIfNeeded() {
-  try {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      const res = await DeviceOrientationEvent.requestPermission();
-      if (res !== 'granted') throw new Error('DeviceOrientation permission denied');
-    }
-
-    if (typeof DeviceMotionEvent !== 'undefined' &&
-        typeof DeviceMotionEvent.requestPermission === 'function') {
-      const res2 = await DeviceMotionEvent.requestPermission();
-      if (res2 !== 'granted') throw new Error('DeviceMotion permission denied');
-    }
-
-    return true;
-  } catch (e) {
-    console.warn(e);
-    alert('モーションセンサーの許可が必要です。「許可」を選択してください。');
-    return false;
-  }
-}
-
-/* ----------------------------------------------------------
-   ★ GPSモード切替
----------------------------------------------------------- */
-btnMode.onclick = async () => {
-  const ok = await requestMotionPermissionIfNeeded();
-  if (!ok) return;
-
-  isGpsMode = !isGpsMode;
-
-  if (isGpsMode) {
-    btnMode.innerText = 'GPS ON';
-    btnMode.classList.add('mode-gps');
-
-    setStatus('モード: GPS固定（位置情報を取得中…）');
-
-    camera.setAttribute('gps-camera', 'gpsMinDistance: 0; gpsTimeInterval: 1000;');
-    ship.setAttribute('gps-entity-place', `latitude: ${targetLat}; longitude: ${targetLon};`);
-    ship.removeAttribute('position');
-
-    window.addEventListener('gps-camera-update-position', (e) => {
-      const { latitude, longitude, accuracy } = e.detail.position;
-      setStatus(
-        `モード: GPS固定\n現在地: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}\n精度: ±${Math.round(accuracy)}m`
-      );
-    });
-
-  } else {
-    location.reload();
-  }
-};
-
-/* ----------------------------------------------------------
-   ★ ピンチズーム
----------------------------------------------------------- */
-let initialDist = 0;
-
-window.addEventListener('touchstart', e => {
-  if (e.touches.length === 2) {
-    initialDist = Math.hypot(
-      e.touches[0].pageX - e.touches[1].pageX,
-      e.touches[0].pageY - e.touches[1].pageY
-    );
-  }
-}, {passive: true});
-
-window.addEventListener('touchmove', e => {
-  if (e.touches.length === 2 && initialDist > 0) {
-    if (e.cancelable) e.preventDefault();
-
-    const dist = Math.hypot(
-      e.touches[0].pageX - e.touches[1].pageX,
-      e.touches[0].pageY - e.touches[1].pageY
-    );
-
-    const diff = dist / initialDist;
-    curScale *= diff;
-    curScale = Math.max(0.1, Math.min(curScale, 50));
-
-    ship.object3D.scale.set(curScale, curScale, curScale);
-    initialDist = dist;
-  }
-}, {passive: false});
-
-/* ----------------------------------------------------------
-   ★ 波揺れ処理
----------------------------------------------------------- */
-function updateWaveMotion(mesh) {
-  const t = performance.now() * 0.001;
-  const speed = Math.abs(stateShip.moving);
-  const turn = Math.abs(stateShip.turning);
-
-  const waveStrength = 0.012 + speed * 0.02 + turn * 0.006;
-  const nextBob = Math.sin(t * 1.55) * (0.014 + speed * 0.018);
-
-  mesh.position.y += nextBob - bobOffset;
-  bobOffset = nextBob;
-
-  mesh.rotation.z = Math.sin(t * 1.7) * waveStrength;
-  mesh.rotation.x = Math.sin(t * 1.18 + 0.7) * waveStrength * 0.55;
-
-  if (waterSurface) {
-    const opacity = speed > 0 ? 0.24 : 0.14;
-    waterSurface.setAttribute('visible', true);
-
-    const circle = waterSurface.querySelector('a-circle');
-    if (circle) {
-      circle.setAttribute(
-        'material',
-        `color: #38bdf8; transparent: true; opacity: ${opacity}; side: double; shader: flat`
-      );
-    }
-  }
-}
-
-/* ----------------------------------------------------------
-   ★ メインループ（移動・旋回・波揺れ）
----------------------------------------------------------- */
-function loopShip() {
-  requestAnimationFrame(loopShip);
-  if (!ship.object3D) return;
-
-  const mesh = ship.object3D;
-
-  updateWaveMotion(mesh);
-
-  const showWake = stateShip.moving > 0;
-  if (lastMoving !== stateShip.moving) {
-    bowWave.setAttribute('visible', showWake ? 'true' : 'false');
-    lastMoving = stateShip.moving;
-  }
-
-  if (stateShip.turning !== 0) {
-    mesh.rotation.y += THREE_A.MathUtils.degToRad(1.0) * stateShip.turning;
-  }
-
-  if (!isGpsMode && stateShip.moving !== 0) {
-    const forward = MODEL_FORWARD_LOCAL.clone()
-      .applyQuaternion(mesh.quaternion)
-      .normalize();
-
-    mesh.position.addScaledVector(forward, stateShip.moving * 0.04);
-  }
-
-  if (zoomState !== 0) {
-    curScale += zoomState * 0.05;
-    curScale = Math.max(0.1, Math.min(curScale, 50));
-    mesh.scale.set(curScale, curScale, curScale);
-  }
-
-  if (!isGpsMode && heightState !== 0) {
-    mesh.position.y += heightState * 0.02;
-  }
-
-  if (!isGpsMode) {
-    const mode =
-      stateShip.moving > 0 ? '前進中（船首波 ON）' :
-      stateShip.moving < 0 ? '後退中' :
-      '待機中（波揺れ）';
-
-    setStatus(
-      `モード: 自由配置（Manual）\n状態: ${mode}\n高さY: ${mesh.position.y.toFixed(2)}\nスケール: ${curScale.toFixed(1)}`
-    );
-  }
-}
-loopShip();
-
-/* ----------------------------------------------------------
-   ★ 操作ボタン設定
----------------------------------------------------------- */
-function setAction(id, moveVal, turnVal) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-
-  const start = (e) => {
-    if (e && e.cancelable) e.preventDefault();
-    stateShip.moving = moveVal;
-    stateShip.turning = turnVal;
-  };
-
-  const end = (e) => {
-    if (e && e.cancelable) e.preventDefault();
-    stateShip.moving = 0;
-    stateShip.turning = 0;
-  };
-
-  btn.addEventListener('touchstart', start, {passive:false});
-  btn.addEventListener('touchend', end, {passive:false});
-  btn.addEventListener('touchcancel', end, {passive:false});
-  btn.addEventListener('mousedown', start);
-  btn.addEventListener('mouseup', end);
-  btn.addEventListener('mouseleave', end);
-}
-
-setAction('btn-fwd', 1, 0);
-setAction('btn-back', -1, 0);
-setAction('btn-turn-left', 0, 1);
-setAction('btn-turn-right', 0, -1);
-setAction('btn-curve-left-fwd', 1, 1);
-setAction('btn-curve-right-fwd', 1, -1);
-setAction('btn-curve-left-back', -1, 1);
-setAction('btn-curve-right-back', -1, -1);
-
-document.getElementById('btn-stop').onclick = () => {
-  stateShip.moving = 0;
-  stateShip.turning = 0;
-};
-
-/* ----------------------------------------------------------
-   ★ ズーム・高さ調整
----------------------------------------------------------- */
-function bindHoldButton(id, onStart, onEnd) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-
-  btn.addEventListener('touchstart', e => {
-    if (e.cancelable) e.preventDefault();
-    onStart();
-  }, {passive:false});
-
-  btn.addEventListener('touchend', onEnd, {passive:true});
-  btn.addEventListener('touchcancel', onEnd, {passive:true});
-  btn.addEventListener('mousedown', onStart);
-  btn.addEventListener('mouseup', onEnd);
-  btn.addEventListener('mouseleave', onEnd);
-}
-
-bindHoldButton('btn-zoom-in', () => { zoomState = 1; }, () => { zoomState = 0; });
-bindHoldButton('btn-zoom-out', () => { zoomState = -1; }, () => { zoomState = 0; });
-bindHoldButton('btn-height-up', () => { heightState = 1; }, () => { heightState = 0; });
-bindHoldButton('btn-height-down', () => { heightState = -1; }, () => { heightState = 0; });
-
-/* ----------------------------------------------------------
-   ★ 撮影機能
----------------------------------------------------------- */
-document.getElementById('btn-capture').onclick = () => {
-  const cvs = document.querySelector('canvas');
-  if (!cvs) return;
-
-  cvs.toBlob(b => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = 'koukaibune_ar_snapshot.png';
-    a.click();
-  });
-};
+  /* ここにあなたの既存の船ARロジックが続きます */
 </script>
-<<<<<<< HEAD
 
-=======
-<!-- ▼ モード切替ロジック（A‑Frame ↔ Three.js） -->
->>>>>>> e42b03ae901dda9def2ed227b7f16a13e4c4e929
-<script>
-/* モード切替ボタン */
-const btnShipMode = document.getElementById("btn-ship-mode");
-const btnCraneMode = document.getElementById("btn-crane-mode");
-
-/* コンテナ */
-const shipContainer = document.getElementById("ship-ar-container");
-const craneContainer = document.getElementById("crane-ar-container");
-
-/* 現在の状態 */
-let currentMode = "ship";
-
-/* ▼ 船ARを生成 */
-function createShipAR() {
-  shipContainer.innerHTML = `
-    <a-scene id="ship-scene"
-      renderer="colorManagement: true"
-      embedded
-      vr-mode-ui="enabled: false"
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-    >
-      <a-entity id="main-camera" camera look-controls></a-entity>
-      <a-entity id="ship"
-                gltf-model="models/Koukaibune.glb"
-                position="0 -0.5 -15"
-                rotation="0 180 0"
-                scale="5 5 5"></a-entity>
-      <a-entity id="bow-wave" visible="false">
-        <a-circle radius="1.2" position="0 0 -1.8"
-                  material="color: #38bdf8; opacity: 0.22; shader: flat"></a-circle>
-      </a-entity>
-      <a-entity id="water-surface" visible="false">
-        <a-circle radius="2.8" position="0 -0.01 0"
-                  material="color: #38bdf8; opacity: 0.14; shader: flat"></a-circle>
-      </a-entity>
-    </a-scene>
-  `;
-}
-
-/* ▼ CraneARを生成 */
-function createCraneAR() {
-  craneContainer.innerHTML = `
-    <div id="app"></div>
-    <!-- ここに Three.js の UI（CraneAR）を再挿入 -->
-  `;
-  // Three.js 初期化スクリプトを再実行
-  initCraneAR();
-}
-
-/* ▼ 船ARモードへ */
-btnShipMode.onclick = () => {
-  if (currentMode === "ship") return;
-
-  // CraneARを破棄
-  craneContainer.innerHTML = "";
-
-  // 船ARを再生成
-  createShipAR();
-
-  shipContainer.style.display = "block";
-  craneContainer.style.display = "none";
-
-  btnShipMode.classList.add("active");
-  btnCraneMode.classList.remove("active");
-
-  currentMode = "ship";
-};
-
-/* ▼ CraneARモードへ */
-btnCraneMode.onclick = () => {
-  if (currentMode === "crane") return;
-
-  // 船ARを破棄
-  shipContainer.innerHTML = "";
-
-  // CraneARを再生成
-  createCraneAR();
-
-  shipContainer.style.display = "none";
-  craneContainer.style.display = "block";
-
-  btnCraneMode.classList.add("active");
-  btnShipMode.classList.remove("active");
-
-  currentMode = "crane";
-};
-
-/* ▼ 初期状態：船ARを生成 */
-createShipAR();
-shipContainer.style.display = "block";
-craneContainer.style.display = "none";
-</script>
-<<<<<<< HEAD
-
-=======
->>>>>>> e42b03ae901dda9def2ed227b7f16a13e4c4e929
 </body>
 </html>
-
