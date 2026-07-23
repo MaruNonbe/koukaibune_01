@@ -228,10 +228,18 @@
 
   <!-- 船モデル -->
   <a-entity id="ship"
-            gltf-model="models/koukaihune.glb"
             position="0 -0.5 -15"
             rotation="0 180 0"
             scale="5 5 5">
+
+    <!-- ▼▼▼ 修正：実際のGLBファイルを解析した結果、モデル自身の重心が
+         原点からX方向に約7.24m、Z方向に約-2.63mズレていることが判明。
+         この実測値をもとに、モデルの重心が entity の原点（回転の中心）に
+         一致するよう、正確な位置補正をここで行う。
+         （Y方向は、モデルの底面がすでにほぼ0の位置にあるため補正不要） ▼▼▼ -->
+    <a-entity gltf-model="models/koukaihune.glb"
+              position="-7.240021 0 2.625925"></a-entity>
+    <!-- ▲▲▲ 修正ここまで ▲▲▲ -->
 
     <!-- 水面 -->
     <a-entity id="water-surface" position="-0.15 -0.025 0" rotation="-90 0 0" visible="true">
