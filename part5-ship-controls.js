@@ -295,6 +295,45 @@
   }
 
   // ------------------------------------------------------------
+  // モデルの中心ズレを自動補正
+  //   小鵜飼船モデル（GLB）の内部原点(pivot)が、モデル自体の中心と
+  //   一致していない場合、a-entityのposition="0 -0.5 -15"（画面中央の
+  //   はずの位置）を指定していても、見た目が左右どちらかに寄って
+  //   表示されることがあります。
+  //   モデル読み込み完了時に実際の形状（バウンディングボックス）を
+  //   計算し、中心が正しく画面中央に来るよう自動調整します。
+  // ------------------------------------------------------------
+
+  // 自動補正だけでは微妙にズレが残る場合に、手動で追加調整するための値。
+  // 右に寄っている場合はプラス、左に寄っている場合はマイナスの値にしてください。
+  const MANUAL_X_OFFSET = 0;
+
+  function setupModelRecenter() {
+    if (!shipEl) return;
+    shipEl.addEventListener("model-loaded", (evt) => {
+      const model = evt.detail && evt.detail.model;
+      if (!model || typeof THREE === "undefined") {
+        console.warn("[Part5] モデルの中心補正に必要な情報が取得できませんでした。");
+        return;
+      }
+      try {
+        const box = new THREE.Box3().setFromObject(model);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        // 左右（X軸）のズレのみを自動補正します。
+        // 前後・上下のズレも気になる場合は、下記2行のコメントを外してください。
+        model.position.x -= center.x;
+        model.position.x += MANUAL_X_OFFSET;
+        // model.position.y -= center.y;
+        // model.position.z -= center.z;
+      } catch (err) {
+        console.warn("[Part5] モデルの中心補正に失敗しました:", err);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------
   // 初期化
   // ------------------------------------------------------------
   window.addEventListener("DOMContentLoaded", () => {
@@ -307,6 +346,7 @@
     }
 
     applyTransform();
+    setupModelRecenter();
     setupTouchControls();
     setupButtonControls();
   });
