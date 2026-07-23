@@ -306,26 +306,20 @@
 
   // 自動補正だけでは微妙にズレが残る場合に、手動で追加調整するための値。
   // 右に寄っている場合はプラス、左に寄っている場合はマイナスの値にしてください。
-  const MANUAL_X_OFFSET = 0;
-
-
-// 自動補正を使わず、X座標を強制的に中央（0）に固定するための値
-  const MANUAL_X_OFFSET = 0; 
+// 画面の真左に寄ってしまう分を相殺するためのオフセット（必要に応じて数値を調整してください）
+  const MANUAL_X_OFFSET = 0; // まずは 0 に設定
 
   function setupModelRecenter() {
     if (!shipEl) return;
+    
+    // タッチ操作（state）の基準となる初期X座標にオフセットを反映させる
+    DEFAULT_STATE.x = MANUAL_X_OFFSET;
+    state.x = DEFAULT_STATE.x;
+    applyTransform();
+
+    // 不要になった自動補正イベントの中身をクリア（タッチ操作を阻害しないようにするため）
     shipEl.addEventListener("model-loaded", (evt) => {
-      const model = evt.detail && evt.detail.model;
-      if (!model || typeof THREE === "undefined") return;
-      try {
-        // ▼ 自動補正（center.x の計算）を一切行わず、位置を強制リセット
-        model.position.x = MANUAL_X_OFFSET;
-        
-        // もしこれでも真左にズレる場合は、ここに強制的なオフセット値を直接入れてください
-        // 例: model.position.x = 5.0; （右に動かしたい場合）
-      } catch (err) {
-        console.warn("[Part5] モデルの強制配置に失敗しました:", err);
-      }
+      console.log("[Part5] モデルの読み込みが完了しました。タッチ操作有効。");
     });
   }
 
