@@ -308,6 +308,8 @@
   // 右に寄っている場合はプラス、左に寄っている場合はマイナスの値にしてください。
   const MANUAL_X_OFFSET = 0;
 
+const MANUAL_X_OFFSET = 0; // （または -0.5 など）
+
   function setupModelRecenter() {
     if (!shipEl) return;
     shipEl.addEventListener("model-loaded", (evt) => {
@@ -322,17 +324,13 @@
         box.getCenter(center);
 
         // 左右（X軸）のズレのみを自動補正します。
-        // 前後・上下のズレも気になる場合は、下記2行のコメントを外してください。
         model.position.x -= center.x;
         model.position.x += MANUAL_X_OFFSET;
-        // model.position.y -= center.y;
-        // model.position.z -= center.z;
       } catch (err) {
         console.warn("[Part5] モデルの中心補正に失敗しました:", err);
       }
     });
   }
-
   // ------------------------------------------------------------
   // 初期化
   // ------------------------------------------------------------
