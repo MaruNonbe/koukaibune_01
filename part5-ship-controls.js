@@ -170,10 +170,16 @@
     return (state.rotY * Math.PI) / 180;
   }
 
+  // 船モデルの船首－船尾の軸は、ワールドのX軸方向を向くように作られているため、
+  // （Z軸ではなく）X軸を主軸として前後移動を計算しています。
+  // ↑↓ボタンを押したときに前後ではなく逆方向（後退のつもりが前進）に動く場合は、
+  // このFORWARD_SIGNを 1 → -1（またはその逆）に変更してください。
+  const FORWARD_SIGN = 1;
+
   // 現在の向き(rotY)に沿って前後移動
   function moveAlongHeading(sign) {
-    state.x += Math.sin(headingRad()) * SETTINGS.buttonMoveStep * sign;
-    state.z += Math.cos(headingRad()) * SETTINGS.buttonMoveStep * sign;
+    state.x += Math.cos(headingRad()) * SETTINGS.buttonMoveStep * sign * FORWARD_SIGN;
+    state.z += Math.sin(headingRad()) * SETTINGS.buttonMoveStep * sign * FORWARD_SIGN;
     applyTransform();
   }
 
