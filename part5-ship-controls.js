@@ -15,17 +15,13 @@
   "use strict";
 
   // ---- 初期値（元のa-entity #shipの属性と合わせています） ----
-// ---- 初期値（必要に応じて z や scale を調整してください） ----
   const DEFAULT_STATE = {
     x: 0,
     y: -0.5,
-    z: -10,      // 距離を少し手前にして画面に捉えやすくする
+    z: -15,
     rotY: 180,
-    scale: 2,    // 大きすぎて画面外に飛び出さないよう、まずは小さめの 2 に設定
+    scale: 5,
   };
-
-  // 現在の状態
-  const state = Object.assign({}, DEFAULT_STATE);
 
   // 現在の状態（この値を書き換えて、都度a-entityに反映します）
   const state = Object.assign({}, DEFAULT_STATE);
@@ -310,16 +306,10 @@
 
   // 自動補正だけでは微妙にズレが残る場合に、手動で追加調整するための値。
   // 右に寄っている場合はプラス、左に寄っている場合はマイナスの値にしてください。
-// 画面の真左に寄ってしまう分を相殺するためのオフセット（必要に応じて数値を調整してください）
-// 手動で強制的に補正するためのオフセット
   const MANUAL_X_OFFSET = 0;
 
   function setupModelRecenter() {
     if (!shipEl) return;
-    
-    // 起動時に確実に初期状態を反映
-    applyTransform();
-
     shipEl.addEventListener("model-loaded", (evt) => {
       const model = evt.detail && evt.detail.model;
       if (!model || typeof THREE === "undefined") {
@@ -327,26 +317,21 @@
         return;
       }
       try {
-        // THREE.jsの機能を使ってモデル自体の重心を正確に取得し、中心を原点に合わせる
         const box = new THREE.Box3().setFromObject(model);
         const center = new THREE.Vector3();
         box.getCenter(center);
 
-        // モデル内部のメッシュ位置をずらして、モデルの「見た目の中心」を親要素（#ship）の原点に一致させる
+        // 左右（X軸）のズレのみを自動補正します。
+        // 前後・上下のズレも気になる場合は、下記2行のコメントを外してください。
         model.position.x -= center.x;
-        model.position.y -= center.y;
-        model.position.z -= center.z;
-
-        // もしこれでも左右にズレる場合は、ここにオフセットを加算する
         model.position.x += MANUAL_X_OFFSET;
-
-        console.log("[Part5] モデルの中心補正が完了しました。タッチ操作有効。");
+        // model.position.y -= center.y;
+        // model.position.z -= center.z;
       } catch (err) {
         console.warn("[Part5] モデルの中心補正に失敗しました:", err);
       }
     });
   }
-
 
   // ------------------------------------------------------------
   // 初期化
