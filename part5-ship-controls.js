@@ -308,29 +308,28 @@
   // 右に寄っている場合はプラス、左に寄っている場合はマイナスの値にしてください。
   const MANUAL_X_OFFSET = 0;
 
-const MANUAL_X_OFFSET = 0; // （または -0.5 など）
+
+// 自動補正を使わず、X座標を強制的に中央（0）に固定するための値
+  const MANUAL_X_OFFSET = 0; 
 
   function setupModelRecenter() {
     if (!shipEl) return;
     shipEl.addEventListener("model-loaded", (evt) => {
       const model = evt.detail && evt.detail.model;
-      if (!model || typeof THREE === "undefined") {
-        console.warn("[Part5] モデルの中心補正に必要な情報が取得できませんでした。");
-        return;
-      }
+      if (!model || typeof THREE === "undefined") return;
       try {
-        const box = new THREE.Box3().setFromObject(model);
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-
-        // 左右（X軸）のズレのみを自動補正します。
-        model.position.x -= center.x;
-        model.position.x += MANUAL_X_OFFSET;
+        // ▼ 自動補正（center.x の計算）を一切行わず、位置を強制リセット
+        model.position.x = MANUAL_X_OFFSET;
+        
+        // もしこれでも真左にズレる場合は、ここに強制的なオフセット値を直接入れてください
+        // 例: model.position.x = 5.0; （右に動かしたい場合）
       } catch (err) {
-        console.warn("[Part5] モデルの中心補正に失敗しました:", err);
+        console.warn("[Part5] モデルの強制配置に失敗しました:", err);
       }
     });
   }
+
+
   // ------------------------------------------------------------
   // 初期化
   // ------------------------------------------------------------
