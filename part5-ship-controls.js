@@ -306,7 +306,7 @@
 
   // 自動補正だけでは微妙にズレが残る場合に、手動で追加調整するための値。
   // 右に寄っている場合はプラス、左に寄っている場合はマイナスの値にしてください。
-  const MANUAL_X_OFFSET = -0.5;
+  const MANUAL_X_OFFSET = 0;
 
   function setupModelRecenter() {
     if (!shipEl) return;
