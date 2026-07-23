@@ -17,8 +17,8 @@
   // ---- 初期値（元のa-entity #shipの属性と合わせています） ----
   const DEFAULT_STATE = {
     x: 0,
-    y: -0.5,
-    z: -15,
+    y: 0,
+    z: -2,
     rotY: 180,
     scale: 5,
   };
