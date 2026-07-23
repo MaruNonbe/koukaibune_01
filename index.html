@@ -101,7 +101,7 @@
       padding: 7px 9px;
       border-radius: 8px;
       white-space: pre-line;
-      max-width: calc(100vw - 20px);
+      max-width: 46vw;
     }
 
     /* 著作権表示 */
@@ -113,7 +113,28 @@
       font-size: 12px;
       z-index: 9999;
       pointer-events: none;
+      max-width: 48vw;
+      text-align: right;
+      white-space: normal;
     }
+
+    /* ▼▼▼ 追加：画面幅が狭いスマートフォンでは、左下（モード表示）と
+       右下（自治体名キャプション）が同じ高さで衝突するため、
+       キャプションを一段上に積んで衝突を避ける ▼▼▼ */
+    @media (max-width: 480px) {
+      #debug-info {
+        font-size: 9.5px;
+      }
+      #copyright {
+        left: 8px;
+        right: 8px;
+        max-width: calc(100vw - 16px);
+        bottom: calc(34px + env(safe-area-inset-bottom));
+        font-size: 10px;
+        text-align: right;
+      }
+    }
+    /* ▲▲▲ 追加ここまで ▲▲▲ */
 
     /* ▼▼▼ 追加：起動時タイトルオーバーレイ（既存UIと同じガラス調デザインに統一） ▼▼▼ */
     #ar-title-overlay {
@@ -144,6 +165,38 @@
       font-size: 0.8rem;
       opacity: 0.85;
     }
+
+    /* ▼▼▼ 追加：画面幅が狭いスマートフォンでは、上部ボタンが2段に折り返わり
+       タイトル表示（画面上から14%の位置）と重なるため、
+       ①ボタンを小さくして1段に収まるようにし、
+       ②タイトルの位置をボタン列の下に固定値で配置し直す ▼▼▼ */
+    @media (max-width: 480px) {
+      .ui-bar {
+        max-width: 96vw;
+        gap: 4px;
+        padding: 5px 6px;
+      }
+      .btn {
+        width: 42px;
+        height: 42px;
+        font-size: 17px;
+        border-radius: 10px;
+      }
+      .btn-icon { font-size: 7.5px; }
+      .btn-icon span { font-size: 14px; margin-bottom: 1px; }
+      .mode-switch { width: 58px !important; font-size: 9.5px; }
+
+      #ar-title-overlay {
+        /* 1段に収めたボタン列（高さ約 42px + 上下パディング + コンテナのtopオフセット）
+           の下に、画面の高さに関わらず確実に収まる固定値に変更 */
+        top: calc(70px + env(safe-area-inset-top));
+        padding: 10px 16px;
+        max-width: 94vw;
+      }
+      .ar-title-main { font-size: 1.05rem; }
+      .ar-title-sub { font-size: 0.72rem; }
+    }
+    /* ▲▲▲ 追加ここまで ▲▲▲ */
     /* ▲▲▲ 追加ここまで ▲▲▲ */
   </style>
 </head>
